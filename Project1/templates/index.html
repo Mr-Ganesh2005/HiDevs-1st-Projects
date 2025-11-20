@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multilingual Support - AI Translation</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌐 Multilingual Support</h1>
+            <p class="subtitle">Translate customer queries to English using AI</p>
+        </header>
+
+        <div class="main-content">
+            <div class="input-section">
+                <label for="query-input">Enter customer query (any language):</label>
+                <textarea 
+                    id="query-input" 
+                    placeholder="Type your query here in any language..."
+                    rows="4"
+                ></textarea>
+                <button id="translate-btn" onclick="translateQuery()">
+                    <span>Translate & Generate Response</span>
+                </button>
+            </div>
+
+            <div id="loading" class="loading hidden">
+                <div class="spinner"></div>
+                <p>Translating...</p>
+            </div>
+
+            <div id="results" class="results hidden">
+                <div class="result-card">
+                    <h3>Original Query</h3>
+                    <div class="result-content" id="original-text"></div>
+                </div>
+
+                <div class="result-card">
+                    <h3>English Translation</h3>
+                    <div class="result-content" id="translated-text"></div>
+                </div>
+
+                <div class="result-card">
+                    <h3>Suggested Response</h3>
+                    <div class="result-content" id="response-text"></div>
+                </div>
+
+                <button class="copy-btn" onclick="copyToClipboard()">Copy Response</button>
+            </div>
+
+            <div id="error" class="error hidden"></div>
+        </div>
+
+        <footer>
+            <p>Powered by Google Gemini AI</p>
+        </footer>
+    </div>
+
+    <script>
+        const queryInput = document.getElementById('query-input');
+        const translateBtn = document.getElementById('translate-btn');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        const error = document.getElementById('error');
+
+        // Allow Enter key to submit (with Shift+Enter for new line)
+        queryInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                translateQuery();
+            }
+        });
+
+        async function translateQuery() {
+            const query = queryInput.value.trim();
+            
+            if (!query) {
+                showError('Please enter a query to translate');
+                return;
+            }
+
+            // Hide previous results and errors
+            results.classList.add('hidden');
+            error.classList.add('hidden');
+            loading.classList.remove('hidden');
+            translateBtn.disabled = true;
+
+            try {
+                const response = await fetch('/translate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: query })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Translation failed');
+                }
+
+                // Display results
+                document.getElementById('original-text').textContent = data.original;
+                document.getElementById('translated-text').textContent = data.translated;
+                document.getElementById('response-text').textContent = data.response;
+
+                loading.classList.add('hidden');
+                results.classList.remove('hidden');
+                translateBtn.disabled = false;
+
+            } catch (err) {
+                loading.classList.add('hidden');
+                showError(err.message);
+                translateBtn.disabled = false;
+            }
+        }
+
+        function showError(message) {
+            error.textContent = message;
+            error.classList.remove('hidden');
+        }
+
+        function copyToClipboard() {
+            const responseText = document.getElementById('response-text').textContent;
+            navigator.clipboard.writeText(responseText).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                btn.style.backgroundColor = '#4caf50';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.backgroundColor = '#2196F3';
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>
+
